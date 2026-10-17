@@ -535,26 +535,28 @@ public class IndexCondition {
             return null;
         }
 
+        // newOrder[i] is the position in this condition of the column used by the i-th index column
         int[] newOrder = new int[length];
-        int found = 0;
+        Column[] newColumns = new Column[length];
         for (int i = 0; i < length; i++) {
             if (indexColumns[i] == null || indexColumns[i].column == null) {
                 return null;
             }
-            for (int j = 0; j < this.columns.length; j++) {
+            int position = -1;
+            for (int j = 0; j < length; j++) {
                 if (columns[j] == indexColumns[i].column) {
-                    newOrder[j] = i;
-                    found++;
+                    if (position >= 0) {
+                        // The column is repeated in the condition
+                        return null;
+                    }
+                    position = j;
                 }
             }
-        }
-        if (found != length) {
-            return null;
-        }
-
-        Column[] newColumns = new Column[length];
-        for(int i = 0; i < length; i++) {
-            newColumns[i] = columns[newOrder[i]];
+            if (position < 0) {
+                return null;
+            }
+            newOrder[i] = position;
+            newColumns[i] = columns[position];
         }
 
         List<Expression> newList = new ArrayList<>(length);

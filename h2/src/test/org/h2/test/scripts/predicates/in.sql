@@ -542,3 +542,73 @@ SELECT COUNT(*) FROM T1 WHERE (C0, C1) IN ((1.0, 1.0), (0.5, 0.5), (2.5, 2.5));
 
 DROP TABLE T1, T2;
 > ok
+
+-- Duplicated columns in a compound condition must not be mapped to an index
+CREATE TABLE T(A INT, B INT);
+> ok
+
+CREATE INDEX I ON T(A, B);
+> ok
+
+INSERT INTO T VALUES (1, 1), (2, 2), (2, 3), (5, 1), (1, 2);
+> update count: 5
+
+SELECT * FROM T WHERE (B, B) = (1, 1) OR (B, B) = (2, 3) ORDER BY A, B;
+> A B
+> - -
+> 1 1
+> 5 1
+> rows (ordered): 2
+
+SELECT * FROM T WHERE (B, B) IN ((1, 1), (2, 3)) ORDER BY A, B;
+> A B
+> - -
+> 1 1
+> 5 1
+> rows (ordered): 2
+
+SELECT * FROM T WHERE (A, A) IN ((1, 1), (2, 2)) ORDER BY A, B;
+> A B
+> - -
+> 1 1
+> 1 2
+> 2 2
+> 2 3
+> rows (ordered): 4
+
+SELECT * FROM T WHERE (B, A) IN ((1, 1), (3, 2)) ORDER BY A, B;
+> A B
+> - -
+> 1 1
+> 2 3
+> rows (ordered): 2
+
+DROP TABLE T;
+> ok
+
+CREATE TABLE T(A INT, B INT, C INT);
+> ok
+
+CREATE INDEX I ON T(A, B, C);
+> ok
+
+INSERT INTO T VALUES (1, 2, 3), (3, 1, 2), (2, 3, 1), (1, 1, 1);
+> update count: 4
+
+SELECT * FROM T WHERE (B, C, A) IN ((2, 3, 1), (1, 2, 3), (1, 1, 1)) ORDER BY A, B, C;
+> A B C
+> - - -
+> 1 1 1
+> 1 2 3
+> 3 1 2
+> rows (ordered): 3
+
+SELECT * FROM T WHERE (B, B, C) IN ((2, 2, 3), (1, 1, 1)) ORDER BY A, B, C;
+> A B C
+> - - -
+> 1 1 1
+> 1 2 3
+> rows (ordered): 2
+
+DROP TABLE T;
+> ok
